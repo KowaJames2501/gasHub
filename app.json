@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "tiffer",
-    "slug": "tiffer",
+    "name": "gas hub",
+    "slug": "gas hub",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "tiffer",
+    "scheme": "gas hub",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
