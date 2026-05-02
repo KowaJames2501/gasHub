@@ -28,7 +28,14 @@ export default function LandingPage() {
       router.push('/login');
       return;
     }
+
     const role = await getItem("user_role");
+
+     if(!role || role === '' || role === null || role === undefined || role === 'undefined' || role === 'null') {
+      router.push('/login');
+      return;
+    } 
+    
     if(role === 'ag') {
       router.push('/(agent)');
     } else if(role === 'ct') {

@@ -38,6 +38,8 @@ export default function GasHubDashboard() {
 
   // --- API SERVICE LAYER (SEPARATED) ---
 
+
+  
   const getHeaders = async () => {
     const token = await getItem("token");
     return { Authorization: `Bearer ${token}` };
@@ -189,8 +191,7 @@ export default function GasHubDashboard() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollBody}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF3B30" />}
-        >
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF3B30" />} >
           {/* FIELD AGENTS */}
           <Text style={styles.sectionTitle}>Available Agents</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalAgentList}>

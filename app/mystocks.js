@@ -16,6 +16,7 @@ export default function StockManagementPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
 
   const fetchStocks = async () => {
     try {
@@ -40,6 +41,7 @@ export default function StockManagementPage() {
       setRefreshing(false);
     }
   };
+  
 
   useEffect(() => {
     fetchStocks();
@@ -101,24 +103,39 @@ export default function StockManagementPage() {
           />
         </View>
 
-        <View style={styles.controlBox}>
-          <Text style={styles.controlLabel}>Available Qty</Text>
-          <View style={styles.qtyContainer}>
-            <TouchableOpacity 
-              onPress={() => updateStock(item.id, 'quantity', Math.max(0, item.quantity - 1))}
-              style={styles.qtyBtn}
-            >
-              <MaterialCommunityIcons name="minus" size={20} color="#FFF" />
-            </TouchableOpacity>
-            <Text style={styles.qtyValue}>{item.quantity}</Text>
-            <TouchableOpacity 
-              onPress={() => updateStock(item.id, 'quantity', item.quantity + 1)}
-              style={styles.qtyBtn}
-            >
-              <MaterialCommunityIcons name="plus" size={20} color="#FFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
+<View style={styles.controlBox}>
+  <Text style={styles.controlLabel}>Available Qty</Text>
+
+  <View style={styles.qtyContainer}>
+    
+    <TouchableOpacity 
+      onPress={() => updateStock(item.id, 'quantity', Math.max(0, item.quantity - 1))}
+      style={styles.qtyBtn}
+    >
+      <MaterialCommunityIcons name="minus" size={20} color="#FFF" />
+    </TouchableOpacity>
+
+    <TextInput
+      style={styles.qtyInput}
+      value={String(item.quantity)}
+      keyboardType="numeric"
+      onChangeText={(value) => {
+        if (!/^\d*$/.test(value)) return;
+
+        const num = parseInt(value) || 0;
+        updateStock(item.id, 'quantity', num);
+      }}
+    />
+
+    <TouchableOpacity 
+      onPress={() => updateStock(item.id, 'quantity', item.quantity + 1)}
+      style={styles.qtyBtn}
+    >
+      <MaterialCommunityIcons name="plus" size={20} color="#FFF" />
+    </TouchableOpacity>
+
+  </View>
+</View>
       </View>
     </View>
   );
@@ -209,5 +226,16 @@ safeArea: { flex: 1, paddingTop: Platform.OS === 'android' ? 25 : 0 },
 
   fab: { position: 'absolute', bottom: 30, right: 25, width: 60, height: 60, backgroundColor: '#FF9500', borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 10, shadowColor: '#FF9500', shadowOpacity: 0.3, shadowRadius: 10 },
   emptyState: { alignItems: 'center', marginTop: 100 },
+  qtyInput: {
+  minWidth: 60,
+  height: 40,
+  marginHorizontal: 8,
+  backgroundColor: '#fff',
+  borderRadius: 8,
+  textAlign: 'center',
+  fontSize: 16,
+  fontWeight: 'bold',
+  padding: 0,
+},
   emptyText: { color: '#3F3F46', marginTop: 10, fontWeight: '600' }
 });

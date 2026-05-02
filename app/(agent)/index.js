@@ -56,10 +56,10 @@ export default function GasHubDashboard() {
   
 
       const role = data?.user?.role;
-        if(role !== 'ag') {
-              triggerLocalNotification("Error","Access Restricted ,You don't have permission to access this dashboard."); 
+            if (role !== 'ag') {
+              triggerLocalNotification("Error", "Access Restricted. Agent credentials required.");
               router.replace("/login");
-        
+              return;
             }
 
       if (data.success) setProfile(data.user);

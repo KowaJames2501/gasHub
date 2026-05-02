@@ -39,6 +39,7 @@ export default function LoginPage() {
         
         const role = data.user.role;
         const routes = { ad: '/(admin)', ct: '/homepage', sp: '/(supplier)', ag: '/(agent)' };
+        triggerLocalNotification('Access Granted!', `Hello ${data.user.name}, Welcome Aboard!`);
         router.replace(routes[role] || '/homepage');
       } else {
         triggerLocalNotification('Login Failed', data.message);

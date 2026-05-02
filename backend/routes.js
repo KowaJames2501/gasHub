@@ -60,11 +60,6 @@ router.post('/register', async (req, res) => {
       [newUserId, welcomeTitle, welcomeMsg]
     );
     
-    const ADMIN_ID = 1; // Change this to your actual admin's user_id
-    await db.query(
-      `INSERT INTO notifications (user_id, role, title, message, type) VALUES (?, 'ad', ?, ?, 'info')`,
-      [ADMIN_ID, adminTitle, adminMsg]
-    );
     res.status(201).json({
       success: true,
       message: 'User registered successfully' });
@@ -72,6 +67,8 @@ router.post('/register', async (req, res) => {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   } });
+
+
 
 // User registration route
 router.post('/agentregister', upload.fields([{ name: 'license', maxCount: 1 }, { name: 'id_card', maxCount: 1 }]), async (req, res) => {
@@ -84,8 +81,8 @@ if (!businessName || !email || !phone || !address) {
   }
 
   // Get file paths
-  const licensePath = req.files['license'] ? `/uploads/agents/${req.files['license'][0].filename}` : null;
-  const idPath = req.files['id_card'] ? `/uploads/agents/${req.files['id_card'][0].filename}` : null;
+  const licensePath = req.files['license'] ? `/uploads/${req.files['license'][0].filename}` : null;
+  const idPath = req.files['id_card'] ? `/uploads/${req.files['id_card'][0].filename}` : null;
 
   try {
     const [existingUser] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
@@ -98,7 +95,6 @@ if (!businessName || !email || !phone || !address) {
       const [agentResult] = await db.query('INSERT INTO storage (user_id,business_license, national_id) VALUES (?, ?, ?)', [userResult.insertId, licensePath, idPath]);
     const newUserId = userResult.insertId;
 
-// 3. INTERNAL EMAIL HANDLING (Transporter created inside the route)
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -147,7 +143,7 @@ html: `
           <strong style="color: #FF9500;">Phone:</strong> +255 620 707 534
         </p>
         <p style="font-size: 13px; color: #A1A1AA; margin: 4px 0;">
-          <strong style="color: #FF9500;">Email:</strong> admin@gashub.com
+          <strong style="color: #FF9500;">Email:</strong> kowajames0@gmail.com
         </p>
       </div>
     </div>
@@ -175,7 +171,11 @@ html: `
       [newUserId, welcomeTitle, welcomeMsg]
     );
     
-    const ADMIN_ID = 1; 
+   
+    const [adminId] = await db.query('SELECT id FROM users WHERE role = "ad" LIMIT 1');
+
+    const ADMIN_ID = adminId[0].id;
+
     await db.query(
       `INSERT INTO notifications (user_id, role, title, message, type) VALUES (?, 'ad', ?, ?, 'info')`,
       [ADMIN_ID, adminTitle, adminMsg]
@@ -187,6 +187,115 @@ html: `
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   } });
+
+
+  router.post('/addsupplier', verifyToken, async (req, res) => {
+  const { name, email, phone} = req.body;
+
+  // 1. Validation
+  if (!name || !email || !phone) {
+    return res.status(400).json({ success: false, message: 'Please fill all required fields' });
+  }
+
+  const securePassword = crypto.randomBytes(16).toString('hex');
+  const hashedPassword = await bcrypt.hash(securePassword, 10);
+  try {
+    const [existing] = await db.query('SELECT * FROM users WHERE email = ? OR phone = ?', [email, phone]);
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: 'Supplier with this email or phone already exists' });
+    }
+
+    const [userResult] = await db.query(
+      'INSERT INTO users (name, email, phone, password, role, location, is_active,created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
+      [name, email, phone, hashedPassword, 'sp', 'ARUSHA', 1, new Date()]
+    );
+    
+    const newUserId = userResult.insertId;
+
+    // 4. Email Setup
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS 
+      }
+    });
+
+    const mailOptions = {
+      from: `"Gas Hub System" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Gas Hub | Supplier Account Created',
+      html: `
+        <div style="background-color: #09090B; color: #FFFFFF; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 500px; margin: auto; padding: 40px 20px; border-radius: 24px; border: 1px solid #27272A; text-align: center;">
+          <h2 style="color: #FF9500; font-size: 24px; font-weight: 900; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">
+            Supplier Partnership
+          </h2>
+          <p style="color: #A1A1AA; font-size: 14px; line-height: 1.5; margin-bottom: 30px;">
+            Hello <b style="color: #FFFFFF;">${name}</b>, your supplier account has been officially registered on the Gas Hub platform.
+          </p>
+
+          <div style="background-color: #18181B; padding: 25px; border-radius: 16px; border: 1px dashed #3F3F46; margin-bottom: 30px;">
+            <p style="margin: 0; font-size: 12px; color: #71717A; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">
+              Temporary Login Password
+            </p>
+            <p style="margin: 10px 0; font-family: monospace; font-size: 20px; font-weight: 900; color: #FF9500;">
+              ${securePassword}
+            </p>
+            <p style="margin: 0; font-size: 11px; color: #71717A;">
+              Please change this password immediately after your first login.
+            </p>
+          </div>
+
+          <div style="border-top: 1px solid #27272A; padding-top: 20px;">
+            <p style="font-size: 12px; color: #71717A; font-weight: 600; margin-bottom: 15px;">
+              OFFICIAL SUPPLIER PORTAL
+            </p>
+            <p style="font-size: 13px; color: #A1A1AA; margin: 4px 0;">
+              Log in to manage your inventory and view agent orders.
+            </p>
+          </div>
+
+          <p style="font-size: 10px; color: #3F3F46; margin-top: 40px; text-transform: uppercase;">
+            Gas Hub Industrial Systems © 2026
+          </p>
+        </div>
+      `
+    };
+
+    // Send Email
+    await transporter.sendMail(mailOptions);
+
+    // 5. Notifications
+    const welcomeTitle = "Supplier Account Created! ";
+    const welcomeMsg = `Hello ${name}!, Welcome to Gas Hub! Your supplier account is now active. You can now manage your stock and orders. GOOD LUCK !`;
+    
+    const adminTitle = "New Supplier Added";
+    const adminMsg = `You have successfully registered ${name} as a new supplier.`;
+
+    // Notify Supplier
+    await db.query(
+      `INSERT INTO notifications (user_id, role, title, message, type) VALUES (?, 'sp', ?, ?, 'success')`,
+      [newUserId, welcomeTitle, welcomeMsg]
+    );
+    
+    const [adminId] = await db.query('SELECT id FROM users WHERE role = "ad" LIMIT 1');
+
+    const ADMIN_ID = adminId[0].id;
+    await db.query(
+      `INSERT INTO notifications (user_id, role, title, message, type) VALUES (?, 'ad', ?, ?, 'info')`,
+      [ADMIN_ID, adminTitle, adminMsg]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Supplier registered and notified successfully'
+    });
+
+  } catch (error) {
+    console.error("Supplier Registration Error:", error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
 
 
   // User login route
@@ -204,6 +313,18 @@ router.post('/login', async (req, res) => {
     }
 
     const user = users[0];
+    if (user.is_active === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Account is suspended. Please contact support.'
+      });
+    } else if (user.role === 'inactive') {
+      return res.status(403).json({
+        success: false,
+        message: 'Account is pending approval. Please wait for admin review.'
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
@@ -390,6 +511,118 @@ router.get('/profile', verifyToken, async (req, res) => {
   }
 });
 
+
+
+router.get('/users', verifyToken, async (req, res) => {
+
+  try {
+    const [users] = await db.query('SELECT * FROM users WHERE role !="ad"');
+    
+    if (users.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Users not found' 
+      });
+    }
+    res.status(200).json({
+      success: true,
+      users: users
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+});
+
+
+router.get('/customers', verifyToken, async (req, res) => {
+
+  try {
+    const [users] = await db.query('SELECT * FROM users WHERE role ="ct" ');
+    
+    if (users.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Users not found' 
+      });
+    }
+    res.status(200).json({
+      success: true,
+      customers: users
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+});
+
+router.get('/suppliers', verifyToken, async (req, res) => {
+
+  try {
+    const [users] = await db.query('SELECT * FROM users WHERE role ="sp" ');
+    
+    if (users.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Users not found' 
+      });
+    }
+    res.status(200).json({
+      success: true,
+      suppliers: users
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+});
+
+
+router.get('/agents', verifyToken, async (req, res) => {
+  try {
+    // Join users with storage based on the user_id
+    const sql = `
+      SELECT 
+        u.*, 
+        s.business_license, 
+        s.national_id 
+      FROM users u
+      LEFT JOIN storage s ON u.id = s.user_id
+      WHERE u.role = "ag" OR u.role = "inactive"
+      ORDER BY u.created_at DESC
+    `;
+    
+    const [users] = await db.query(sql);
+    
+    if (users.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No agents found' 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      agents: users
+    });
+
+  } catch (error) {
+    console.error("Fetch Agents Error:", error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 router.get('/paymentdetails/:agentId', verifyToken, async (req, res) => {
   const { agentId } = req.params;
@@ -1039,6 +1272,7 @@ router.put('/readallnotifications', verifyToken, async (req, res) => {
   }
 });
 
+
 router.put('/notifications/:id', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -1047,6 +1281,112 @@ router.put('/notifications/:id', verifyToken, async (req, res) => {
     res.json({ success: true, message: "Notification marked as read." });
   } catch (error) {
     res.status(500).json({ success: false, message: "Notification to mark as read failed." });
+  }
+});
+
+router.post('/updatecustomers/:id', verifyToken, async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { id } = req.params;
+    const { role } = req.body; // role is 0 or 1
+
+    // 1. Update the customer status
+    await db.query('UPDATE users SET is_active = ? WHERE id = ? ', [role, id]);
+
+    // 2. Notify Admin (FIXED: Added the missing 'type' value)
+    await db.query(
+      'INSERT INTO notifications (user_id, title, type, message) VALUES (?, ?, ?, ?)',
+      [adminId, 'Update Success', 'info', `Customer ID:${id} status updated to ${role == 1 ? 'Active' : 'Inactive'}`]
+    );
+
+    // 3. Notify Customer
+    await db.query(
+      'INSERT INTO notifications (user_id, title, type, message) VALUES (?, ?, ?, ?)',
+      [id, 'Account Update', 'info', `Your account status has been updated to ${role == 1 ? 'Active' : 'Inactive'}.`]
+    );
+
+    res.json({ success: true, message: "Customer updated." });
+  } catch (error) {
+    console.error("SQL Error:", error); // Check your terminal to see the exact error
+    res.status(500).json({ success: false, message: "Failed to update customer." });
+  }
+});
+
+router.post('/updatesupplier/:id', verifyToken, async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { id } = req.params;
+    const { role } = req.body;
+
+    // 1. Update the user status
+    await db.query('UPDATE users SET is_active = ? WHERE id = ? ', [role, id]);
+
+    // 2. Notify Admin (FIXED: Added 'title' column and value)
+    await db.query(
+      'INSERT INTO notifications (user_id, title, type, message) VALUES (?, ?, ?, ?)',
+      [adminId, 'Supplier Update', 'success', `Supplier ID:${id} status changed to ${role == 1 ? 'Active' : 'Inactive'}.`]
+    );
+
+    // 3. Notify Supplier (FIXED: Standardized column order)
+    await db.query(
+      'INSERT INTO notifications (user_id, title, type, message) VALUES (?, ?, ?, ?)',
+      [id, 'Account Updated', 'success', role == 1 ? "Your supplier account is now active. You can start managing stock." : "Your supplier account has been deactivated."]
+    );
+
+    res.json({ success: true, message: "Supplier updated." });
+  } catch (error) {
+    // Log the actual error to your terminal so you can see exactly what SQL says
+    console.error("Database Error:", error); 
+    res.status(500).json({ success: false, message: "Failed to update supplier." });
+  }
+});
+router.post('/updateagents/:id', verifyToken, async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { id } = req.params;
+    const { role, is_active } = req.body; 
+    let query = 'UPDATE users SET ';
+    const params = [];
+
+    if (role !== undefined && is_active !== undefined) {
+      query += 'role = ?, is_active = ? ';
+      params.push(role, is_active);
+    } else if (role !== undefined) {
+      query += 'role = ? ';
+      params.push(role);
+    } else if (is_active !== undefined) {
+      query += 'is_active = ? ';
+      params.push(is_active);
+    } else {
+      return res.status(400).json({ success: false, message: "No data provided to update." });
+    }
+
+    query += 'WHERE id = ?';
+    params.push(id);
+
+    // 1. Perform the update
+    await db.query(query, params);
+
+    // 2. Notify Admin - Fixed column/value alignment
+    const statusMsg = is_active != undefined ? ` (Status: ${is_active == 1 ? 'Active' : 'Inactive'})` : '';
+    await db.query(
+      'INSERT INTO notifications (user_id, title, type, message) VALUES (?, ?, ?, ?)',
+      [adminId, 'Agent Update', 'success', `Agent ID:${id} profile updated${statusMsg}.`]
+    );
+
+    // 3. Notify Agent - Fixed: Removed the extra 'success' string that was shifting values
+    await db.query(
+      'INSERT INTO notifications (user_id, title, type, message) VALUES (?, ?, ?, ?)',
+      [id, 'Profile Update', 'info', "Your agent profile has been reviewed and updated by GasHub Admin."]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: "Agent updated successfully." 
+    });
+  } catch (error) {
+    console.error("DB Error:", error);
+    res.status(500).json({ success: false, message: "Failed to update agent." });
   }
 });
 
@@ -1128,21 +1468,71 @@ router.post('/updatePaymentDetails', verifyToken, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Failed to sync payment data', error: error.message });
   }
-});
-
-router.post('/addStock', verifyToken, async (req, res) => {
-  const { jina_la_mtungi, quantity, size, price, photo_url } = req.body;
+});router.post('/addStock', verifyToken, upload.single('photo'), async (req, res) => {
   const userId = req.user.id;
-
+  const { jina_la_mtungi, quantity, size, price } = req.body;
+  
   try {
+    const file = req.file;
+
+    // 1. Check if the user already has this specific brand and size in stock
+    const [existingStock] = await db.execute(
+      `SELECT id FROM stock WHERE user_id = ? AND jina_la_mtungi = ? AND size = ?`,
+      [userId, jina_la_mtungi, size]
+    );
+
+    if (existingStock.length > 0) {
+      // Cleanup: Remove the uploaded file since we are aborting
+      if (file) {
+        const fs = require('fs');
+        const path = require('path');
+        const fullPath = path.join(__dirname, '..', 'uploads', file.filename);
+        if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+      }
+      return res.status(400).json({ 
+        success: false, 
+        message: `You already have ${size} stock for ${jina_la_mtungi}. update instead.` 
+      });
+    }
+
+    // 2. Photo validation
+    let photoPath = null;
+    if (file) {
+      photoPath = `/uploads/${file.filename}`;
+    } else {
+      return res.status(400).json({ success: false, message: 'Stock photo is required' });
+    }
+
+    // 3. Proceed with Insertion
     const [result] = await db.execute(
       `INSERT INTO stock (user_id, jina_la_mtungi, quantity, size, price, photo_url) 
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [userId, jina_la_mtungi, quantity, size, price, photo_url]
+      [userId, jina_la_mtungi, quantity, size, price, photoPath]
     );
-    res.status(201).json({ success: true, insertId: result.insertId });
+
+    res.status(201).json({ 
+      success: true, 
+      message: 'Stock added successfully',
+      insertId: result.insertId,
+      photo_url: photoPath 
+    });
+
   } catch (error) {
-    res.status(500).json({ message: 'Error adding stock', error: error.message });
+    console.error("Stock Insertion Error:", error);
+    
+    // Cleanup on Error
+    if (req.file) {
+      const fs = require('fs');
+      const path = require('path');
+      const fullPath = path.join(__dirname, '..', 'uploads', req.file.filename);
+      if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+    }
+
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error adding stock', 
+      error: error.message 
+    });
   }
 });
 

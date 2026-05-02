@@ -105,6 +105,28 @@ const fetchSupplierPayment = async (supplierId) => {
     });
   };
 
+const updateCartQuantity = (productId, quantity) => {
+  setCart(prev => {
+    const current = prev[productId];
+    if (!current) return prev;
+
+    // Remove item if quantity is 0 or less
+    if (quantity <= 0) {
+      const newCart = { ...prev };
+      delete newCart[productId];
+      return newCart;
+    }
+
+    // Update quantity
+    return {
+      ...prev,
+      [productId]: {
+        ...current,
+        qty: quantity,
+      },
+    };
+  });
+};
   const cartItems = useMemo(() => Object.values(cart), [cart]);
   const cartTotal = cartItems.reduce((sum, item) => {
     const price = parseInt(item.price.toString().replace(/,/g, ''));
@@ -222,21 +244,42 @@ const fetchSupplierPayment = async (supplierId) => {
                       <View style={styles.priceContainer}>
                         <Text style={styles.priceText}>TSh {product.price}</Text>
                         
-                        {qty > 0 ? (
-                          <View style={styles.qtyControlRow}>
-                            <TouchableOpacity style={styles.controlBtn} onPress={() => decrementCart(product.id)}>
-                              <MaterialCommunityIcons name="minus" size={14} color="#FFF" />
-                            </TouchableOpacity>
-                            <Text style={styles.controlQtyText}>{qty}</Text>
-                            <TouchableOpacity style={[styles.controlBtn, { backgroundColor: '#FF9500' }]} onPress={() => incrementCart(product)}>
-                              <MaterialCommunityIcons name="plus" size={14} color="#FFF" />
-                            </TouchableOpacity>
-                          </View>
-                        ) : (
-                          <TouchableOpacity style={styles.addBtn} onPress={() => incrementCart(product)}>
-                            <MaterialCommunityIcons name="plus" size={18} color="#FFF" />
-                          </TouchableOpacity>
-                        )}
+{qty > 0 ? (
+  <View style={styles.qtyControlRow}>
+    
+    <TouchableOpacity 
+      style={styles.controlBtn} 
+      onPress={() => decrementCart(product.id)}
+    >
+      <MaterialCommunityIcons name="minus" size={14} color="#FFF" />
+    </TouchableOpacity>
+
+    <TextInput
+      style={styles.controlQtyInput}
+      value={String(qty)}
+      keyboardType="numeric"
+      onChangeText={(value) => {
+        const num = parseInt(value) || 0;
+        updateCartQuantity(product.id, num);
+      }}
+    />
+
+    <TouchableOpacity 
+      style={[styles.controlBtn, { backgroundColor: '#FF9500' }]} 
+      onPress={() => incrementCart(product)}
+    >
+      <MaterialCommunityIcons name="plus" size={14} color="#FFF" />
+    </TouchableOpacity>
+
+  </View>
+) : (
+  <TouchableOpacity 
+    style={styles.addBtn} 
+    onPress={() => incrementCart(product)}
+  >
+    <MaterialCommunityIcons name="plus" size={18} color="#FFF" />
+  </TouchableOpacity>
+)}
                       </View>
                     </View>
                   );
@@ -367,5 +410,15 @@ const styles = StyleSheet.create({
   totalValue: { color: '#FFF', fontSize: 18, fontWeight: '800' },
   finalBossBtn: { backgroundColor: '#FF9500', padding: 15, borderRadius: 15, alignItems: 'center' },
   finalBossText: { color: '#FFF', fontWeight: '800' },
-  cancelBtn: { marginTop: 15, alignItems: 'center' }
+  cancelBtn: { marginTop: 15, alignItems: 'center' },
+  controlQtyInput: {
+  minWidth: 40,
+  height: 30,
+  marginHorizontal: 5,
+  backgroundColor: '#fff',
+  borderRadius: 5,
+  textAlign: 'center',
+  fontWeight: 'bold',
+  padding: 0,
+}
 });
