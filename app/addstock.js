@@ -10,7 +10,7 @@ import { pickFile } from '../utils/filepicker';
 import { getItem } from '../utils/storage';
 import { BASE_URL } from '../utils/config';
 import { triggerLocalNotification } from '../utils/notifications';
-import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
+// import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 
 export default function AddStockPage() {
   const router = useRouter();

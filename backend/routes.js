@@ -1060,11 +1060,13 @@ router.put('/resolveorder', verifyToken, async (req, res) => {
         );
 
         if (stockRecord.length === 0) {
-          throw new Error(`Product not found for stock ID: ${item.stock_id}`);
+          return res.status(403).json({ success: false, message: `Product not found for stock ID: ${item.stock_id}`});
+          // throw new Error(`Product not found for stock ID: ${item.stock_id}`);
         }
 
         if (stockRecord[0].quantity < item.quantity) {
-          throw new Error(`Insufficient stock for ${stockRecord[0].jina_la_mtungi}. Available: ${stockRecord[0].quantity}`);
+          return res.status(400).json({ success: false, message: `Insufficient stock for ${stockRecord[0].jina_la_mtungi}. Available: ${stockRecord[0].quantity}` });
+          // throw new Error(`Insufficient stock for ${stockRecord[0].jina_la_mtungi}. Available: ${stockRecord[0].quantity}`);
         }
 
         await connection.query(

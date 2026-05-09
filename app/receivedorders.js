@@ -73,8 +73,10 @@ export default function AgentOrdersPage() {
       });
       const result = await response.json();
       if (result.success) {
-        triggerLocalNotification("Updated", `Order No: ${orderId} is now ${newStatus}`);
+        triggerLocalNotification("Updated", result.message);
         fetchOrders();
+      }else if(result.success === false){
+        triggerLocalNotification("Error", result.message || "Update failed.");
       }
     } catch (e) {
       triggerLocalNotification("Error", "Update failed.");
